@@ -5,8 +5,8 @@ from pygame.locals import *
 
 class Ball:
     def __init__(self, v):
-        self.x0 = 250
-        self.y0 = 650
+        self.x0 = BALLX
+        self.y0 = BALLY
         self.vx = v[0]
         self.vy = v[1]
 
@@ -39,7 +39,7 @@ class Ball:
                 dx = x - FRONT_RIM
                 dy = y - HOOP_Y_CENTER
                 dist = math.sqrt(dx ** 2 + dy ** 2)
-                if dist <= 55 and i > 50:
+                if dist <= BALL_RADIUS + 5 and i > 50:
                     total_time = i / 1000
                     print(total_time)
                     while t <= total_time:
@@ -106,19 +106,24 @@ WHITE = (255, 255, 255)
 DISPLAYSURF.fill(GREEN)
 
 EMPTY_COLOR = (100, 100, 100)
+TRANSPARENT_EMPTY = (100, 100, 100, 0)
 EMPTY_BOARD = pygame.Surface((SCREENX, SCREENY))
 EMPTY_BOARD.fill((100, 100, 100))
 
 BALL_DIAMETER = 100
 BALL_RADIUS = BALL_DIAMETER // 2
 BALL_COLOR = (219, 116, 20)
-BALL = pygame.Surface((BALL_DIAMETER, BALL_DIAMETER))
-BALL.fill(EMPTY_COLOR)
+BALL = pygame.Surface((BALL_DIAMETER, BALL_DIAMETER)).convert_alpha()
+BALL.fill(TRANSPARENT_EMPTY)
+
+BALLX = 200
+BALLY = 550
+
 pygame.draw.circle(BALL, BALL_COLOR, (BALL_DIAMETER // 2, BALL_DIAMETER // 2), BALL_DIAMETER // 2)
 
 LAUNCH_SCALE = 10
 
-HOOP_HEIGHT = 250
+HOOP_HEIGHT = 150
 HOOP_SMAXIS = 75
 HOOP_WIDTH = 200
 FRONT_RIM = 700
@@ -175,13 +180,13 @@ def menu():
 
 def play():
     DISPLAYSURF.fill((100, 100, 100))
-    DISPLAYSURF.blit(BALL, (200, 600))
+    DISPLAYSURF.blit(BALL, (BALLX - BALL_RADIUS, BALLY - BALL_RADIUS))
     pygame.draw.arc(DISPLAYSURF, RED, HOOP, 0, math.tau, 10)
     pygame.draw.line(DISPLAYSURF, WHITE, (900, HOOP_Y_CENTER), (900, HOOP_Y_CENTER - BACK_BOARD_HEIGHT), 10)
 
 
 def launch(poss):
-    ball = Ball((LAUNCH_SCALE * (250 - poss[0]), LAUNCH_SCALE * (650 - poss[1])))
+    ball = Ball((LAUNCH_SCALE * (BALLX - poss[0]), LAUNCH_SCALE * (BALLY - poss[1])))
     print(ball.run_animation(1, True))
 
 
@@ -191,8 +196,8 @@ def test_launch(poss):
 
 
 def draw_line(poss):
-    pygame.draw.line(DISPLAYSURF, GREEN, (250, 650), (poss[0], poss[1]), 1)
-    print(f'{(LAUNCH_SCALE * (250 - poss[0]), LAUNCH_SCALE * (650 - poss[1]))}')
+    pygame.draw.line(DISPLAYSURF, GREEN, (BALLX, BALLY), (poss[0], poss[1]), 1)
+    print(f'{(LAUNCH_SCALE * (BALLX - poss[0]), LAUNCH_SCALE * (BALLY - poss[1]))}')
 
 
 pygame.mouse.set_visible(False)
@@ -217,12 +222,12 @@ while True:
         if event.type == MOUSEBUTTONDOWN:
             distance = math.sqrt(math.pow(pos[0] - 700, 2) +
                                  math.pow(pos[1] - 580, 2))
-            distance2 = math.sqrt(math.pow(pos[0] - 250, 2) +
-                                  math.pow(pos[1] - 650, 2))
+            distance2 = math.sqrt(math.pow(pos[0] - BALLX, 2) +
+                                  math.pow(pos[1] - BALLY, 2))
             if in_main and distance < 100:
                 play()
                 in_main = False
-            if not in_main and distance2 < 50:
+            if not in_main and distance2 < BALL_RADIUS:
                 pulling = True
         if event.type == MOUSEBUTTONUP and pulling:
             pulling = False
