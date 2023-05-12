@@ -21,7 +21,10 @@ class Ball:
         animation_clock = pygame.time.Clock()
 
         time_to_ground = (- self.vy + math.sqrt(self.vy ** 2 + 1960 * (SCREENY - self.y0))) / 980
-        time_to_left = (- self.x0) / self.vx
+        if self.vx == 0:
+            time_to_left = -1
+        else:
+            time_to_left = (- self.x0) / self.vx
         time_to_right = (SCREENX - self.x0) / self.vx
 
         times = [time_to_ground, time_to_left, time_to_right]
@@ -41,10 +44,9 @@ class Ball:
                 dist = math.sqrt(dx ** 2 + dy ** 2)
                 if dist <= BALL_RADIUS + 5 and i > 50:
                     total_time = i / 1000
-                    print(total_time)
                     while t <= total_time:
-                        dt = animation_clock.tick() / 1000
-                        t += dt
+                        dt = animation_clock.tick(FPS) / 1000
+                        t += dt * 1.2
                         animate(self.get_pos(t))
                     print('rim time')
                     self.x0, self.y0 = (x, y)
@@ -54,7 +56,23 @@ class Ball:
                     self.vy = (vy + 2 * m * dy) / 2
 
                     return self.run_animation(n + 1, True)
+                dx = x - (FRONT_RIM + HOOP_WIDTH)
+                dy = y - (HOOP_Y_CENTER - BACK_BOARD_HEIGHT)
+                dist = math.sqrt(dx ** 2 + dy ** 2)
+                if dist <= BALL_RADIUS + 5 and dy < 0 and i > 50:
+                    total_time = i / 1000
+                    while t <= total_time:
+                        dt = animation_clock.tick(FPS) / 1000
+                        t += dt * 1.2
+                        animate(self.get_pos(t))
+                    print('rim time')
+                    self.x0, self.y0 = (x, y)
+                    vx, vy = self.get_velo(total_time)
+                    m = - (dx * vx + dy * vy) / (dx ** 2 + dy ** 2)
+                    self.vx = (vx + 2 * m * dx) / 2
+                    self.vy = (vy + 2 * m * dy) / 2
 
+                    return self.run_animation(n + 1, True)
         t_height1 = (FRONT_RIM + BALL_RADIUS - self.x0) / self.vx
         t_height2 = (FRONT_RIM + HOOP_WIDTH - BALL_RADIUS - self.x0) / self.vx
         y1 = self.get_pos(t_height1)[1]
@@ -64,8 +82,8 @@ class Ball:
         if HOOP_Y_CENTER - BACK_BOARD_HEIGHT <= y2 <= HOOP_Y_CENTER and t_height2 > 0 and board:
             total_time = t_height2
             while t <= total_time:
-                dt = animation_clock.tick() / 1000
-                t += dt
+                dt = animation_clock.tick(FPS) / 1000
+                t += dt * 1.2
                 animate(self.get_pos(t))
             print(f'back time {total_time}')
             self.x0, self.y0 = self.get_pos(total_time)
@@ -74,8 +92,8 @@ class Ball:
             return self.run_animation(n + 1, False)
 
         while t <= time:
-            dt = animation_clock.tick() / 1000
-            t += dt
+            dt = animation_clock.tick(FPS) / 1000
+            t += dt * 1.2
             animate(self.get_pos(t))
         print('normal time')
         return made
@@ -197,7 +215,7 @@ def test_launch(poss):
 
 def draw_line(poss):
     pygame.draw.line(DISPLAYSURF, GREEN, (BALLX, BALLY), (poss[0], poss[1]), 1)
-    print(f'{(LAUNCH_SCALE * (BALLX - poss[0]), LAUNCH_SCALE * (BALLY - poss[1]))}')
+    # print(f'{(LAUNCH_SCALE * (BALLX - poss[0]), LAUNCH_SCALE * (BALLY - poss[1]))}')
 
 
 pygame.mouse.set_visible(False)
