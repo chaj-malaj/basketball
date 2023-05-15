@@ -1,44 +1,108 @@
+import math
 import pygame
 import sys
-import math
+
 from pygame.locals import *
 
 
 class Ball:
     def __init__(self, v):
-        self.x = 200
-        self.y = 600
+        self.x0 = BALLX
+        self.y0 = BALLY
         self.vx = v[0]
         self.vy = v[1]
-        self.distance = 700
 
     def get_pos(self, t):
-        return self.x + self.vx * t, self.y - self.vy * t + 490 * t * t
+        return self.x0 + self.vx * t, self.y0 + self.vy * t + 490 * t * t
 
-    def run_animation(self):
-        time = 0
+    def get_velo(self, t):
+        return self.vx, self.vy + 980 * t
+
+    def run_animation(self, n, board):
+        t = 0
         animation_clock = pygame.time.Clock()
 
-        total_time2 = self.vy / 490
-        if self.vx == 0:
-            total_time = total_time2
-        else:
-            total_time = min(self.distance / self.vx, total_time2)
+        time_to_ground = (- self.vy + math.sqrt(self.vy ** 2 + 1960 * (SCREENY - self.y0))) / 980
+        time_to_left = (- self.x0) / self.vx
+        time_to_right = (SCREENX - self.x0) / self.vx
 
-        while time <= total_time:
-            dt = animation_clock.tick(FPS) / 1000
-            time += dt
-            self.animate(time)
+        times = [time_to_ground, time_to_left, time_to_right]
 
-    def animate(self, t):
-        new_screen = pygame.Surface((SCREENX, SCREENY))
-        new_screen.blit(EMPTY_BOARD, (0, 0))
-        pygame.draw.arc(new_screen, RED, Rect(700, 200, 200, 150), 0, math.pi, 10)
-        ballx, bally = self.get_pos(t)
-        new_screen.blit(BALL, (ballx, bally))
-        pygame.draw.arc(new_screen, RED, Rect(700, 200, 200, 150), math.pi, math.tau, 10)
-        DISPLAYSURF.blit(new_screen, (0, 0))
-        pygame.display.update()
+        for time in times:
+            if time <= 0:
+                times.remove(time)
+
+        time = min(times)
+
+        if True:
+            for i in range(math.floor(time * 1000)):
+                x, y = self.get_pos(i / 1000)
+                dx = x - FRONT_RIM
+                dy = y - HOOP_Y_CENTER
+                dist = math.sqrt(dx ** 2 + dy ** 2)
+                if dist <= BALL_RADIUS + 5 and i > 50:
+                    total_time = i / 1000
+                    while t <= total_time:
+                        dt = animation_clock.tick() / 1000
+                        t += dt * 1.2
+                        animate(self.get_pos(t))
+                    self.x0, self.y0 = (x, y)
+                    vx, vy = self.get_velo(total_time)
+                    m = - (dx * vx + dy * vy) / (dx ** 2 + dy ** 2)
+                    self.vx = (vx + 2 * m * dx) / 2
+                    self.vy = (vy + 2 * m * dy) / 2
+
+                    return self.run_animation(n + 1, True)
+
+        t_height1 = (FRONT_RIM + BALL_RADIUS - self.x0) / self.vx
+        t_height2 = (FRONT_RIM + HOOP_WIDTH - BALL_RADIUS - self.x0) / self.vx
+        y1 = self.get_pos(t_height1)[1]
+        y2 = self.get_pos(t_height2)[1]
+        made = y1 <= HOOP_Y_CENTER <= y2 or y2 <= HOOP_Y_CENTER <= y1
+
+        if HOOP_Y_CENTER - BACK_BOARD_HEIGHT <= y2 <= HOOP_Y_CENTER and t_height2 > 0 and board:
+            total_time = t_height2
+            while t <= total_time:
+                dt = animation_clock.tick() / 1000
+                t += dt * 1.2
+                animate(self.get_pos(t))
+            self.x0, self.y0 = self.get_pos(total_time)
+            self.vx = -self.vx / 4
+            self.vy = self.get_velo(total_time)[1] / 4
+            return self.run_animation(n + 1, False)
+
+        while t <= time:
+            dt = animation_clock.tick() / 1000
+            t += dt * 1.2
+            animate(self.get_pos(t))
+        return made
+
+
+def animate(poss):
+    new_screen = pygame.Surface((SCREENX, SCREENY))
+    new_screen.blit(EMPTY_BOARD, (0, 0))
+    pygame.draw.arc(new_screen, RED, HOOP, 0, math.pi, 10)
+    ballx, bally = poss
+    new_screen.blit(BALL, (ballx - 50, bally - 50))
+    pygame.draw.arc(new_screen, RED, HOOP, math.pi, math.tau, 10)
+    if green:
+        pygame.draw.line(new_screen, GREEN, (900, HOOP_Y_CENTER), (900, HOOP_Y_CENTER - BACK_BOARD_HEIGHT), 10)
+    else:
+        pygame.draw.line(new_screen, WHITE, (900, HOOP_Y_CENTER), (900, HOOP_Y_CENTER - BACK_BOARD_HEIGHT), 10)
+    new_screen.blit(score, (30, 30))
+    new_screen.blit(record, (260, 30))
+    num = font_MED.render(str(current), True, textColor[1])
+    new_screen.blit(num, (90, 80))
+    numba = font_MED.render(str(best), True, textColor[1])
+    new_screen.blit(numba, (290, 80))
+    DISPLAYSURF.blit(new_screen, (0, 0))
+    pygame.display.update()
+
+
+best = 0
+current = 0
+green = False
+seconds_green = 0
 
 
 pygame.init()
@@ -49,22 +113,40 @@ SCREENY = 800
 DISPLAYSURF = pygame.display.set_mode((SCREENX, SCREENY))
 GREEN = (52, 235, 103)
 RED = (196, 26, 14)
+WHITE = (255, 255, 255)
+
 DISPLAYSURF.fill(GREEN)
 
 EMPTY_COLOR = (100, 100, 100)
+TRANSPARENT_EMPTY = (100, 100, 100, 0)
 EMPTY_BOARD = pygame.Surface((SCREENX, SCREENY))
 EMPTY_BOARD.fill((100, 100, 100))
 
 BALL_DIAMETER = 100
+BALL_RADIUS = BALL_DIAMETER // 2
 BALL_COLOR = (219, 116, 20)
-BALL = pygame.Surface((BALL_DIAMETER, BALL_DIAMETER))
-BALL.fill(EMPTY_COLOR)
+BALL = pygame.Surface((BALL_DIAMETER, BALL_DIAMETER)).convert_alpha()
+BALL.fill(TRANSPARENT_EMPTY)
+
+BALLX = 200
+BALLY = 550
+
 pygame.draw.circle(BALL, BALL_COLOR, (BALL_DIAMETER // 2, BALL_DIAMETER // 2), BALL_DIAMETER // 2)
 
 LAUNCH_SCALE = 10
 
+HOOP_HEIGHT = 150
+HOOP_SMAXIS = 75
+HOOP_WIDTH = 200
+FRONT_RIM = 700
+HOOP_Y_CENTER = HOOP_HEIGHT + HOOP_SMAXIS
+
+HOOP = Rect(FRONT_RIM, HOOP_HEIGHT, HOOP_WIDTH, HOOP_SMAXIS * 2)
+
+BACK_BOARD_HEIGHT = 200
+
 pygame.init()
-FPS = 60
+FPS = 120
 gameClock = pygame.time.Clock()
 up = False
 down = False
@@ -77,8 +159,9 @@ title = font_LARGE.render("BASKETBALL", True, textColor[3])
 font_MED = pygame.font.Font("freesansbold.ttf", 40)
 font_SMALL = pygame.font.Font("freesansbold.ttf", 30)
 playa = font_MED.render("PLAY", True, textColor[1])
-levels = font_MED.render("LEVELS", True, textColor[1])
-main = font_MED.render("MAIN MENU", True, textColor[1])
+score = font_MED.render("SCORE", True, textColor[1])
+record = font_MED.render("BEST", True, textColor[1])
+main = font_MED.render("MENU", True, textColor[1])
 tit_lvl = font_LARGE.render("LEVELS", True, textColor[3])
 tit_tut = font_LARGE.render("HOW TO PLAY", True, textColor[3])
 back = font_MED.render("BACK", True, textColor[1])
@@ -87,7 +170,9 @@ tit_2 = pygame.image.load("physics.png")
 mouse_1 = pygame.image.load("mouser123.png")
 mouse_2 = pygame.image.load("mouser.png")
 img_1 = pygame.image.load("shooter.png")
+harden = pygame.image.load("harden.png")
 img_1 = pygame.transform.scale(img_1, (330, 330))
+harden = pygame.transform.scale(harden, (330, 330))
 mouse_2 = pygame.transform.scale(mouse_2, (30, 30))
 mouse_1 = pygame.transform.scale(mouse_1, (30, 30))
 tit_2 = pygame.transform.scale(tit_2, (350, 80))
@@ -110,39 +195,72 @@ def menu():
 
 def play():
     DISPLAYSURF.fill((100, 100, 100))
-    DISPLAYSURF.blit(BALL, (200, 600))
-    pygame.draw.arc(DISPLAYSURF, RED, Rect(700, 200, 200, 150), 0, math.tau, 10)
+    DISPLAYSURF.blit(BALL, (BALLX - BALL_RADIUS, BALLY - BALL_RADIUS))
+    pygame.draw.arc(DISPLAYSURF, RED, HOOP, 0, math.tau, 10)
+    if green:
+        pygame.draw.line(DISPLAYSURF, GREEN, (900, HOOP_Y_CENTER), (900, HOOP_Y_CENTER - BACK_BOARD_HEIGHT), 10)
+    else:
+        pygame.draw.line(DISPLAYSURF, WHITE, (900, HOOP_Y_CENTER), (900, HOOP_Y_CENTER - BACK_BOARD_HEIGHT), 10)
+    DISPLAYSURF.blit(score, (30, 30))
+    DISPLAYSURF.blit(record, (260, 30))
+    num = font_MED.render(str(current), True, textColor[1])
+    DISPLAYSURF.blit(num, (90, 80))
+    numba = font_MED.render(str(best), True, textColor[1])
+    DISPLAYSURF.blit(numba, (290, 80))
+
+
+def make():
+    global current, best, green
+    current += 1
+    if current > best:
+        best = current
+    green = True
+    return
+
+
+def miss():
+    global current, best, green
+    green = False
+    if current > best:
+        best = current
+    current = 0
+    return
 
 
 def launch(poss):
-    ball = Ball((LAUNCH_SCALE * (250 - poss[0]), LAUNCH_SCALE * (poss[1] - 650)))
-    ball.run_animation()
+    ball = Ball((LAUNCH_SCALE * (BALLX - poss[0]), LAUNCH_SCALE * (BALLY - poss[1])))
+    made = ball.run_animation(1, True)
+    if made:
+        make()
+    else:
+        miss()
 
 
 def draw_line(poss):
-    pygame.draw.line(DISPLAYSURF, GREEN, (250, 650), (poss[0], poss[1]), 1)
+    pygame.draw.line(DISPLAYSURF, GREEN, (BALLX, BALLY), (poss[0], poss[1]), 1)
 
 
 pygame.mouse.set_visible(False)
+
+time_passed = 0
+
 while True:
     pos = pygame.mouse.get_pos()
     for event in pygame.event.get():
         if event.type == QUIT:
             pygame.quit()
             sys.exit()
-        if event.type == KEYDOWN:
-            a = pygame.key.get_pressed()
         pos = pygame.mouse.get_pos()
         mouse_state = pygame.mouse.get_pressed()
         if event.type == MOUSEBUTTONDOWN:
             distance = math.sqrt(math.pow(pos[0] - 700, 2) +
                                  math.pow(pos[1] - 580, 2))
-            distance2 = math.sqrt(math.pow(pos[0] - 250, 2) +
-                                  math.pow(pos[1] - 650, 2))
+            distance2 = math.sqrt(math.pow(pos[0] - BALLX, 2) +
+                                  math.pow(pos[1] - BALLY, 2))
             if in_main and distance < 100:
                 play()
                 in_main = False
-            if not in_main and distance2 < 50:
+            if not in_main and distance2 < BALL_RADIUS:
                 pulling = True
         if event.type == MOUSEBUTTONUP and pulling:
             pulling = False
@@ -158,6 +276,6 @@ while True:
             DISPLAYSURF.blit(mouse_1, (pos[0] - 15, pos[1] - 15))
         else:
             DISPLAYSURF.blit(mouse_2, (pos[0] - 15, pos[1] - 15))
-    time_passed = gameClock.tick(30)
+
     time_milis += time_passed
     pygame.display.update()
