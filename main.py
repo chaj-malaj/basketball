@@ -95,6 +95,7 @@ def animate(poss):
     new_screen.blit(num, (90, 80))
     numba = font_MED.render(str(best), True, textColor[1])
     new_screen.blit(numba, (290, 80))
+    new_screen.blit(harden2, (0, 487))
     DISPLAYSURF.blit(new_screen, (0, 0))
     pygame.display.update()
 
@@ -171,6 +172,8 @@ mouse_1 = pygame.image.load("mouser123.png")
 mouse_2 = pygame.image.load("mouser.png")
 img_1 = pygame.image.load("shooter.png")
 harden = pygame.image.load("harden.png")
+harden2 = pygame.image.load("harden2.png")
+harden2 = pygame.transform.scale(harden2, (330, 330))
 img_1 = pygame.transform.scale(img_1, (330, 330))
 harden = pygame.transform.scale(harden, (330, 330))
 mouse_2 = pygame.transform.scale(mouse_2, (30, 30))
@@ -195,7 +198,6 @@ def menu():
 
 def play():
     DISPLAYSURF.fill((100, 100, 100))
-    DISPLAYSURF.blit(BALL, (BALLX - BALL_RADIUS, BALLY - BALL_RADIUS))
     pygame.draw.arc(DISPLAYSURF, RED, HOOP, 0, math.tau, 10)
     if green:
         pygame.draw.line(DISPLAYSURF, GREEN, (900, HOOP_Y_CENTER), (900, HOOP_Y_CENTER - BACK_BOARD_HEIGHT), 10)
@@ -207,6 +209,8 @@ def play():
     DISPLAYSURF.blit(num, (90, 80))
     numba = font_MED.render(str(best), True, textColor[1])
     DISPLAYSURF.blit(numba, (290, 80))
+    DISPLAYSURF.blit(harden, (55, 487))
+
 
 
 def make():
